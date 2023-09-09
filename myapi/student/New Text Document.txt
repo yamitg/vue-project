@@ -1,0 +1,132 @@
+<?php
+class DB_Functions {
+     private $db,$con;
+	    function __construct() {
+        require_once '../../api_connect/DB_Connect.php';
+        // connecting to database
+       $this->db = new DB_Connect();
+        $this->con = $this->db->connect();
+    }
+
+    // destructor
+    function __destruct() {}
+/*------------------------------------------- Api Common Methods Starting--------------------------------------------------------------------*/ 
+    //escape string function
+	public function e($in){
+		return mysqli_real_escape_string($this->con,$in);
+	}
+	
+	//Method for retrieve Data input SQL Query
+	public function select_query($query){
+		    $result = $this->con->query($query);
+            $no_of_rows = mysqli_num_rows($result);           
+			if ($no_of_rows>0) {
+            while($row = $result->fetch_assoc()) {
+              $lr[]=$row;}
+		    return $lr;       
+            }else if(!mysqli_error($this->con)){
+                return 'No Data Available!';
+    		} else {$error =mysqli_error($this->con);
+            return $error;}
+	}
+	
+	//Method for insert Data input SQL Query
+	public function insert_query($query){
+	    $this->con->query($query);
+	    if(mysqli_affected_rows($this->con)>0){
+	        $id = $this->con->insert_id;
+	        return $id=array('insert_id'=>$id);
+	    } else {$error =mysqli_error($this->con);
+            return $error;}
+	}
+	
+	//Method for update Data input SQL Query
+    public function update_query($query){
+		    $update_result = $this->con->query($query); 
+            if(mysqli_affected_rows($this->con)>0){	
+               return $result=array();
+              } else {$error =mysqli_error($this->con);
+            return $error;}
+	}
+/*------------------------------------ Api Common Methods Ending (Start Work Below Line)---------------------------------------------------*/
+public function register_admin($admintype_id,$admin_name,$admin_phone,$admin_email,$admin_pass){
+	    $qr="select admin_id from tbl_admin where admin_email='$admin_email'";
+	    $result = $this->select_query($qr);
+	    if(is_array($result)){
+	        return "Email already exist";
+	    }else if(!is_array($result) and !mysqli_error($this->con)){
+	        $qr11="select admin_id from tbl_admin where admin_phone='$admin_phone'";
+	        $result11 = $this->select_query($qr11);
+	        if(is_array($result11)){
+	            return "Phone Number already exist";
+	        }else if(!is_array($result11) and !mysqli_error($this->con)){
+	        $date=date("d-m-Y H:i:s");
+	        $qr="INSERT INTO `tbl_admin`(`admin_email`, `admin_pass`, `admintype_id`, `admin_date`,`admin_status`) VALUES('$admin_email','$admin_pass','$admintype_id','$date','1')";
+	        $result1 = $this->insert_query($qr);
+	        return $result1;
+	         } else {
+	            $error =mysqli_error($this->con);
+	            return 'error_true_'.$error;
+	        }
+	      } else {
+	        $error =mysqli_error($this->con);
+	        return 'error_true_'.$error;
+	    }
+	    
+	}
+	public function admin_login($username,$password,$admin_ip){
+	    $qr="select admin_id,admin_name,admintype_id,admin_status from tbl_admin where admin_email='$username' and admin_pass='$password'";
+	    $result = $this->select_query($qr);
+	    if(is_array($result)){
+	        $qr="select admin_id,admintype_id,admin_name from tbl_admin where admin_email='$username' and admin_pass='$password' and admin_status='1'";
+	        $result1 = $this->select_query($qr);
+	        if(is_array($result1)){
+	            $admin_id=$result1[0]['admin_id'];
+	            $date=date("d-m-Y H:i:s");
+	            $up="update tbl_admin set admin_login='$date',admin_ip='$admin_ip',admin_loginstatus='1' where admin_id=$admin_id";
+	            $this->update_query($up); 
+	            return $result1;
+	        }else if(!is_array($result1) and !mysqli_error($this->con)){
+	            return "Your Account lock contact to admin";
+	            
+	        } else {
+	            $error =mysqli_error($this->con);
+	            return 'error_true_'.$error;
+	        }
+	        
+	    } else if(!is_array($result) and !mysqli_error($this->con)){
+	        return "Invalid Login Details";
+	        
+	    } else {
+	        $error =mysqli_error($this->con);
+	        return 'error_true_'.$error;
+	    }
+	}
+	
+	public function admin_logout($admin_id){
+	    $date=date("d-m-Y H:i:s");
+	    $up="update tbl_admin set admin_logout='$date',admin_loginstatus='0' where admin_id=$admin_id";
+	    $result = $this->update_query($up);
+	   return $result;
+	}
+	
+	public function update_pass($admin_id,$admin_oldpass,$admin_pass){
+	    $qr="select admin_id from tbl_admin where admin_pass='$admin_oldpass' and admin_id='$admin_id'";
+	    $result = $this->select_query($qr);
+	    if(is_array($result)){
+     $qr = "update tbl_admin set admin_pass='$admin_pass' where admin_id=$admin_id ";
+        $result1 = $this->update_query($qr); 
+       return $result1;
+	    } else {
+	        return "Old Password does not match";
+	    }
+    }
+    
+    public function selectadminbyid($admin_id) {
+         $qr="select e.*,a.admintype_name from tbl_admin e join tbl_admintype a on e.admintype_id=a.admintype_id where e.admin_id='$admin_id'";
+         $result = $this->select_query($qr);
+        return $result;
+    }
+}
+
+?>
